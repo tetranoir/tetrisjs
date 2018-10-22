@@ -1,0 +1,4 @@
+.TBlock {
+  background: linear-gradient(top, rgba(246,248,249,.4) 0%, rgba(229,235,238,.4) 50%, rgba(215,222,227,.4) 50%, rgba(245,247,249,.4) 100%);
+  box-shadow: inset 0px -1px 0px 1px rgba(0, 0, 0, 0.21), inset 0px -2px 0px 1px rgb(158, 158, 158), inset 0 0px 20px 0px rgba(0,0,0,0.34);
+}

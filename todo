@@ -1,0 +1,13 @@
+todo
+
+end
+    overlay
+    show game stats
+    restart button
+    selection
+        mode: 40 lines
+            options: n lines, no gravity
+        mode: marathon
+            options: no gravity, level up
+        mode: 2 min
+            options: time, no gravity, level up
