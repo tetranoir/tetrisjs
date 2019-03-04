@@ -1,7 +1,8 @@
 import React, { Component } from 'react';
-import { useSpring } from 'react-spring';
+// import { useSpring } from 'react-spring';
 import { cloneDeep } from 'lodash';
 import PropTypes from 'prop-types';
+import { FP, BLOCK, LevelGravity, GAMESTATE, SCORING, LevelLines, MAXLEVEL } from './constants';
 
 import Blocks from './Blocks';
 
@@ -11,34 +12,6 @@ const TIMEUPDATE_ON = true; // toggles the showing the timer
 const GRAVITY_AFTER_DOWN = true; // toggles gravity interval considers down action as a gravity
 
 // UTIL
-// fps constants
-const FP = {
-  S60: 17,
-  S30: 34,
-  S24: 42,
-};
-const BLOCK = {
-  empty: 0,
-  filled: 1,
-};
-const LevelGravity = [
-  1,
-  .717,
-  .633,
-  .55,
-  .467,
-  .383,
-  .3,
-  .217,
-  .133,
-  .1,
-  .083, .083, .083, // 10, 11, 12
-  .067, .067, .067, // 13, 14, 15
-  .05, .05, .05, // 16, 17, 18
-  .033, .033, .033, .033, .033, .033, .033, .033, .033, .033, // 19 - 28
-  .017, .017, .017, .017, // 29+ 
-]; // SNES framerates
-
 // for function application-like syntax
 const app = (obj, ...fns) => {
   return fns.reduce((o, fn) => fn(o), obj);
@@ -91,20 +64,6 @@ const hotKeys = (
     </div>
   </div>
 );
-
-// game consts
-const GAMESTATE = {
-  STOPPED: 0,
-  RUNNING: 1,
-};
-const SCORING = {
-  0: 0,
-  1: 100,
-  2: 300,
-  3: 500,
-  4: 800,
-};
-
 
 // notes: vertical 22, horizontal 10
 /*   x,y
@@ -195,6 +154,12 @@ class Board extends Component {
       this.actions = [];
       clearInterval(this.gameLoop);
       this.gameLoop = setInterval(this.loop.bind(this), this.frameRate);
+    }
+    // clears duplicate actions
+    if (this.actions.length > 1) {
+      this.actions = this.actions.reduce(
+        (actions, a) => actions[actions.length - 1] === a ? actions : [...actions, a]
+      );
     }
   }
 
@@ -390,7 +355,7 @@ class Board extends Component {
     if (board.length === 22) {
       // no shifts needed
       state.combo = 0;
-      return state;
+      return { state, linesCleared: 0 };
     }
 
     const linesCleared = 22 - board.length;
@@ -402,11 +367,18 @@ class Board extends Component {
       return row;
     })).concat(board);
 
+    return { state, linesCleared };
+    // return { ...state, board }; // concerned about constantly creating objs
+  }
+
+  scoring({ state, linesCleared }) {
+    if (state.level < MAXLEVEL && state.linesCleared >= LevelLines[state.level + 1]) {
+      state.level += 1;
+    }
     state.score += SCORING[linesCleared] + state.combo * state.level * 50;
     state.combo += 1;
     state.linesCleared += linesCleared;
     return state;
-    // return { ...state, board }; // concerned about constantly creating objs
   }
 
   // changes board, wipes piece's existence off the board
@@ -488,7 +460,13 @@ class Board extends Component {
         console.log('move position failed')
         // state chaining
         const oldBoard = cloneDeep(board);
-        const actualState = app(this.state, this.cementPiece, this.removeLines, this.shiftBoard);
+        const actualState = app(
+          this.state,
+          this.cementPiece,
+          this.removeLines,
+          this.shiftBoard,
+          this.scoring,
+        );
         actualState.oldBoard = oldBoard;
         this.setState(actualState); 
       } else {
