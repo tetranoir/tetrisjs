@@ -60,7 +60,7 @@ class Tetris extends Component {
       app = <End progressHandler={this.setScreen1} />;
     }
 
-    return <div style={{ height: this.state.h, width: this.state.w + 400, margin: 'auto' }}>{app}</div>;
+    return <div className="Tetris" style={{ height: this.state.h, width: this.state.w + 500, margin: 'auto' }}>{app}</div>;
   }
 }
 

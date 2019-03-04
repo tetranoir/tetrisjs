@@ -40,10 +40,10 @@ const T = [
   [0, 0, 0],
 ];
 
-const colorsAry = ['#ffb3ba', '#ffdfba', '#ffffba', '#baffc9', '#bae1ff', '#ecd1c4', '#f2a2e8'];
+const colorsAry = ['#15CECE', '#306ADA', '#E69D48', '#FFEA41', '#4DDF73', '#BC4DA7', '#DB4D5E'];
 // const colorsAry = ['#022FA8', '#FABB00', '#0202AF', '#EA002A', '#9400A3', '#008699', '#FA7800'];
 
-export const Shapes = { L, J, I, O, S, Z, T };
+export const Shapes = { I, J, L, O, S, T, Z };
 
 const shapeList = Object.keys(Shapes);
 
@@ -53,7 +53,7 @@ export const Colors = shapeList.reduce((acc, val, i) => {
 }, {});
 
 const objs = shapeList.reduce((acc, val) => {
-  acc[val] = { name: val, shape: Shapes[val], color: Colors[val] };
+  acc[val] = { name: val, shape: Shapes[val], backgroundColor: Colors[val] };
   return acc;
 }, {});
 

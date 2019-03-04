@@ -1,4 +1,89 @@
-.TBlock {
-  background: linear-gradient(top, rgba(246,248,249,.4) 0%, rgba(229,235,238,.4) 50%, rgba(215,222,227,.4) 50%, rgba(245,247,249,.4) 100%);
-  box-shadow: inset 0px -1px 0px 1px rgba(0, 0, 0, 0.21), inset 0px -2px 0px 1px rgb(158, 158, 158), inset 0 0px 20px 0px rgba(0,0,0,0.34);
+.Tetris {
+  font-family: helvetica;
+}
+
+.TRow:nth-child(odd) .TBlock:nth-child(odd),
+.TRow:nth-child(even) .TBlock:nth-child(even)  {
+  background:
+    linear-gradient(to bottom,
+      rgba(246,248,249,.4) 0%,
+      rgba(229,235,238,.4) 50%,
+      rgba(215,222,227,.4) 50%,
+      rgba(245,247,249,.4) 100%
+    ),
+    #272727;
+  box-shadow:
+    inset 0px -1px 0px 1px rgba(0, 0, 0, 0.21),
+    /*inset 0px -2px 0px 1px rgba(158, 158, 158, 1),*/
+    inset 0 0px 20px 0px rgba(0,0,0,0.33);
+}
+
+.TRow:nth-child(odd) .TBlock:nth-child(even),
+.TRow:nth-child(even) .TBlock:nth-child(odd) {
+  background:
+    linear-gradient(to bottom,
+      rgba(246,248,249,.4) 0%,
+      rgba(229,235,238,.4) 50%,
+      rgba(215,222,227,.4) 50%,
+      rgba(245,247,249,.4) 100%
+    ),
+    #131313;
+  box-shadow:
+    inset 0px -1px 0px 1px rgba(0, 0, 0, 0.21),
+    /*inset 0px -2px 0px 1px rgba(158, 158, 158, 1),*/
+    inset 0 0px 20px 0px rgba(0,0,0,0.33);
+}
+
+.THotKeys {
+  border: 1px solid #e0e0e0;
+  border-radius: 3px;
+  padding: 15px;
+  margin: 15px 0;
+  box-shadow: 0px 1px 8px 0px #bbb;
+}
+
+.THotKeyRow {
+  margin-bottom: 5px;
+}
+
+.THotKeyRow > div {
+  display: inline-block;
+}
+
+.TNextQueue {
+  background:
+    radial-gradient(#424242 15%, transparent 16%) 0 0,
+    radial-gradient(#424242 15%, transparent 16%) 8px 8px,
+    radial-gradient(rgba(255,255,255,.1) 15%, transparent 20%) 0 1px,
+    radial-gradient(rgba(255,255,255,.1) 15%, transparent 20%) 8px 9px;
+  background-color: #575757;
+  background-size: 16px 16px;
+}
+
+.keyAlign {
+  width: 60px;
+  margin-right: 15px;
+  text-align: right;
+}
+
+.key {
+  text-transform: uppercase;
+  background: #EEE;
+  border-radius: 3px;
+  padding: 2px 5px;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0px 1px #bbb;
+  display: inline-block;
+  color: #666;
+  font-size: 15px;
+}
+
+.divider {
+  border: 1px solid #CCC;
+  margin: 10px 0;
+}
+
+.title {
+  font-size: 18px;
+  margin-bottom: 10px;
 }

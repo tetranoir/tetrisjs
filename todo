@@ -11,3 +11,10 @@ end
             options: no gravity, level up
         mode: 2 min
             options: time, no gravity, level up
+
+in game
+    score ticker animation
+    level animation
+    line clear animation
+
+styles moved from js to css

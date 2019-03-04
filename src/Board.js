@@ -1,14 +1,14 @@
 import React, { Component } from 'react';
+import { useSpring } from 'react-spring';
+import { cloneDeep } from 'lodash';
 import PropTypes from 'prop-types';
 
 import Blocks from './Blocks';
 
-import './index.css';
-
 // dev config
-const GRAVITY_ON = true;
-const TIMEUPDATE_ON = true;
-const GRAVITY_AFTER_DOWN = true;
+const GRAVITY_ON = true; // toggles gravity
+const TIMEUPDATE_ON = true; // toggles the showing the timer
+const GRAVITY_AFTER_DOWN = true; // toggles gravity interval considers down action as a gravity
 
 // UTIL
 // fps constants
@@ -17,6 +17,28 @@ const FP = {
   S30: 34,
   S24: 42,
 };
+const BLOCK = {
+  empty: 0,
+  filled: 1,
+};
+const LevelGravity = [
+  1,
+  .717,
+  .633,
+  .55,
+  .467,
+  .383,
+  .3,
+  .217,
+  .133,
+  .1,
+  .083, .083, .083, // 10, 11, 12
+  .067, .067, .067, // 13, 14, 15
+  .05, .05, .05, // 16, 17, 18
+  .033, .033, .033, .033, .033, .033, .033, .033, .033, .033, // 19 - 28
+  .017, .017, .017, .017, // 29+ 
+]; // SNES framerates
+
 // for function application-like syntax
 const app = (obj, ...fns) => {
   return fns.reduce((o, fn) => fn(o), obj);
@@ -32,10 +54,7 @@ const rot90 = m => {
   return n;
 };
 
-// component params
-const blockBg = {
-  backgroundColor: '#737374',
-};
+// components and styles
 const TRowStyle = {
   display: 'flex',
 };
@@ -43,6 +62,37 @@ const TNextRowStyle = {
   display: 'flex',
   justifyContent: 'center',
 };
+
+const hotKeys = (
+  <div className="THotKeys">
+    <div className="THotKeyRow">
+      <div className="keyAlign"><span className="key">left</span></div>
+      <div>move left</div>
+    </div>
+    <div className="THotKeyRow">
+      <div className="keyAlign"><span className="key">right</span></div>
+      <div>move right</div>
+    </div>
+    <div className="THotKeyRow">
+      <div className="keyAlign"><span className="key">up</span></div>
+      <div>rotate 90 deg clockwise</div>
+    </div>
+    <div className="THotKeyRow">
+      <div className="keyAlign"><span className="key">down</span></div>
+      <div>move down</div>
+    </div>
+    <div className="THotKeyRow">
+      <div className="keyAlign"><span className="key">space</span></div>
+      <div>drop</div>
+    </div>
+    <div className="THotKeyRow">
+      <div className="keyAlign"><span className="key">r</span></div>
+      <div>restart</div>
+    </div>
+  </div>
+);
+
+// game consts
 const GAMESTATE = {
   STOPPED: 0,
   RUNNING: 1,
@@ -75,26 +125,29 @@ class Board extends Component {
       return new Array(22).fill(0).map((b, i) => {
         const row = new Array(10).fill();
         for (let j = 0; j < 10; j++) {
-          row[j] = { state: 0 };
+          row[j] = { state: BLOCK.empty, color: undefined };
         }
         return row;
       })
     };
-
     // fresh game state
-    this.initState = () => ({
-      board: this.initBoard(),
-      piece: undefined, // undef piece triggers new piece init
-      nextBlock: Blocks.getRandomBlock(),
-      holdBlock: undefined,
-      combo: 0,
-      linesCleared: 0,
-      score: 0,
-      level: 1,
-      actionHist: [],
-      time: Date.now(),
-      startTime: Date.now(),
-    });
+    this.initState = () => {
+      const board = this.initBoard();
+      return {
+        board,
+        oldBoard: board,
+        piece: undefined, // undef piece triggers new piece init
+        nextBlock: Blocks.getRandomBlock(),
+        holdBlock: undefined,
+        combo: 0,
+        linesCleared: 0,
+        score: 0,
+        level: 0,
+        actionHist: [],
+        time: Date.now(),
+        startTime: Date.now(),
+      };
+    }
 
     this.state = {
       // meta state
@@ -158,14 +211,13 @@ class Board extends Component {
       display: 'flex',
       justifyContent: 'center',
       flexDirection: 'column',
-      backgroundColor: blockBg.backgroundColor,
     };
   }
 
   computeBlockStyle(h, w) {
-    const unit = { height: h / 22, width: w / 10 };
-    const blockStyle = Object.assign(unit, blockBg);
-    return blockStyle;
+    // const unit = { height: h / 22, width: w / 10 };
+    // const blockStyle = Object.assign(unit, blockBg);
+    return { height: h / 22, width: w / 10 };
   }
 
   // pieceLocations is modified to contain where the piece parts exist on the board
@@ -214,7 +266,7 @@ class Board extends Component {
     // update piece to new live location
     newLive.forEach(b => {
       // set board space to piece color
-      b.color = piece.color;
+      b.backgroundColor = piece.backgroundColor;
       // set board space occupancy to active
       b.state = 2;
     });
@@ -250,7 +302,7 @@ class Board extends Component {
       // turn live into projection location w correct color
       piece.live = piece.projection.map(b => {
         b.state = 2;
-        b.color = piece.color;
+        b.backgroundColor = piece.backgroundColor;
         return b;
       });
       return 'failed';
@@ -265,6 +317,14 @@ class Board extends Component {
       }
       if (newState === null) {
         movement.x = piece.x - 1;
+        newState = this.insertPiece(board, { ...piece, ...movement })
+      }
+      if (newState === null) {
+        movement.x = piece.x - 2;
+        newState = this.insertPiece(board, { ...piece, ...movement })
+      }
+      if (newState === null) {
+        movement.x = piece.x + 2;
         newState = this.insertPiece(board, { ...piece, ...movement })
       }
       return newState;
@@ -297,7 +357,7 @@ class Board extends Component {
 
     // projection coloring
     // set board space to piece color if space isnt occupied
-    savedProjection.forEach(b => b.state === 0 && (b.color = '#B8B8B8'));
+    savedProjection.forEach(b => b.state === 0 && (b.backgroundColor = '#B8B8B8'));
 
     piece.projection = savedProjection;
   }
@@ -307,7 +367,7 @@ class Board extends Component {
     // set state to part of the board
     state.piece.live.forEach(b => b.state = 1);
     // projections not in live get their color reset
-    state.piece.projection.forEach(b => b.state === 0 && (b.color = undefined));
+    state.piece.projection.forEach(b => b.state === 0 && (b.backgroundColor = undefined));
     // remove active piece in state
     state.piece = undefined;
     return state;
@@ -317,7 +377,7 @@ class Board extends Component {
   // removes filled lines and replace with 'cleared'
   removeLines(state) {
     state.board.forEach((row, i, board) => {
-      if (row.reduce((isFilled, e) => (isFilled && e.state === 1), true)) {
+      if (row.reduce((isFilled, e) => (isFilled && e.state === BLOCK.filled), true)) {
         board[i] = null;
       }
     });
@@ -337,7 +397,7 @@ class Board extends Component {
     state.board = (new Array(linesCleared).fill(0).map(() => {
       const row = new Array(10).fill();
       for (let i = 0; i < 10; i++) {
-        row[i] = { state: 0 };
+        row[i] = { state: BLOCK.empty };
       }
       return row;
     })).concat(board);
@@ -353,12 +413,12 @@ class Board extends Component {
   cleanLive(piece) {
     // reset live piece location on board
     piece.live.forEach(b => {
-      b.color = undefined;
+      b.backgroundColor = undefined;
       b.state = 0;
     });
     // reset projection location on board
     piece.projection.forEach(b => {
-      b.color = undefined;
+      b.backgroundColor = undefined;
     });
   }
 
@@ -389,7 +449,7 @@ class Board extends Component {
     p.lastGravity = time; // last time gravity was applied
     p.lastDown = time; // last time a down action was applied
     p.rotation = 0; // 1 == 90, 2 == 180, 3 == 270, cw rotation
-    return p
+    return p;
   }
 
   loop() {
@@ -410,25 +470,31 @@ class Board extends Component {
       } else {
         // set state for new piece
         newState.nextBlock =  Blocks.getRandomBlock();
+        newState.oldBoard = newState.board; // no change (for animations)
         this.setState(newState);
       }
     } else {
+      const { level, piece, board, actionHist } = this.state;
       // maybe update block position from gravity
       if (GRAVITY_ON) {
-        this.checkGravity(time, this.state.piece, this.gravityDelay, this.actions);
+        this.checkGravity(time, piece, LevelGravity[level] * this.gravityDelay, this.actions);
       }
       const transform = this.actions.shift();
-      const newState = this.updatePiece(this.state.board, this.state.piece, transform, time);
+      const newState = this.updatePiece(board, piece, transform, time);
       if (newState === null) {
         // no op
       } else if (newState === 'failed') {
         // gravity move position failed
         console.log('move position failed')
         // state chaining
-        this.setState(app(this.state, this.cementPiece, this.removeLines, this.shiftBoard)); 
+        const oldBoard = cloneDeep(board);
+        const actualState = app(this.state, this.cementPiece, this.removeLines, this.shiftBoard);
+        actualState.oldBoard = oldBoard;
+        this.setState(actualState); 
       } else {
         // successful move
-        this.state.actionHist.push(transform);
+        actionHist.push(transform);
+        newState.oldBoard = newState.board; // no change (for animations)
         this.setState(newState);
       }
     }
@@ -441,7 +507,7 @@ class Board extends Component {
         const key = `${block.name}-${i}-${j}`;
         if (e === 1) {
           // if block is occupied, give it its color
-          return <div key={key} className="TBlock" style={{ ...blockStyle, backgroundColor: block.color }}></div>;
+          return <div key={key} className="TBlock" style={{ ...blockStyle, backgroundColor: block.backgroundColor }}></div>;
         }
         // otherwise render empty block
         return <div key={key} style={blockStyle}></div>;
@@ -451,26 +517,52 @@ class Board extends Component {
     return <div>{blockRender}</div>;
   }
 
-  renderBoardRow(row, i, blockStyle) {
+  renderBoardRow(row, oldRow, i, blockStyle) {
     return row.map((e, j) => {
       const key = `board-${i}-${j}`;
-      if (e.color) {
+      if (e.backgroundColor) {
         // if block is occupied, give it its color
-        return <div key={key} className="TBlock" style={{ ...blockStyle, backgroundColor: e.color }}></div>;
+        return <div key={key} className="TBlock" style={{ ...blockStyle, backgroundColor: e.backgroundColor }}></div>;
       }
       // otherwise render empty block
       return <div key={key} className="TBlock" style={blockStyle}></div>;
     });
   }
+  // renderBoardRow(row, oldRow, i, blockStyle) {
+  //   return row.map((e, j) => {
+  //     console.log(j, oldRow[j].backgroundColor, e.backgroundColor);
+  //     return (<Spring
+  //       from={{ backgroundColor: oldRow[j].backgroundColor }}
+  //       to={{ backgroundColor: e.backgroundColor }}
+  //       config={config.default}
+  //     >
+  //       {props => (
+  //         <div key={`board-${i}-${j}`} className="TBlock" style={{ ...blockStyle, backgroundColor: props.backgroundColor }} />
+  //       )}
+  //     </Spring>);
+  //     // <div key={`board-${i}-${j}`} className="TBlock" style={{ ...blockStyle, backgroundColor: e.backgroundColor }} />
+  //   });
+  // }
 
-  renderBoard(board, blockStyle) {
-    return board.map((row, i) => 
-      <div key={`board-${i}`} className="TRow" style={TRowStyle}>{this.renderBoardRow(row, i, blockStyle)}</div>
+  // renderBoard(board, blockStyle) {
+  //   return board.map((row, i) =>
+  //     <div key={`board-${i}`} className="TRow" style={TRowStyle}>{this.renderBoardRow(row, i, blockStyle)}</div>
+  //   );
+  // }
+  renderBoard(board, oldBoard, blockStyle) {
+    return board.map((row, i) =>
+      <div
+        key={`board-${i}`}
+        className="TRow"
+        style={TRowStyle}
+      >
+        {this.renderBoardRow(row, oldBoard[i], i, blockStyle)}
+      </div>
     );
   }
 
   render() {
-    const areaRender = this.renderBoard(this.state.board, this.state.blockStyle);
+    const areaRender = this.renderBoard(this.state.board, this.state.oldBoard, this.state.blockStyle);
     const nextQueueRender = this.renderBlock(this.state.nextBlock, this.state.blockStyle);
     return (
       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -484,6 +576,7 @@ class Board extends Component {
           <div>Score: {this.state.score}</div>
           <div>Level: {this.state.level}</div>
           <div>Time: {((this.state.time - this.state.startTime) / 1000).toFixed(1)}s</div>
+          { hotKeys }
         </div>
       </div>
     );
